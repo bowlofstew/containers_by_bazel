@@ -18,24 +18,14 @@ dependencies:
   post:
     - echo 'startup --output_base /home/ubuntu/.cache/bazel/' > ~/.bazelrc
     # sandboxing does not work  --sandbox_debug
-    - echo 'test --genrule_strategy=standalone --spawn_strategy=standalone' >> ~/.bazelrc
-    - bazel fetch //test/...
+    - echo 'build --genrule_strategy=standalone --spawn_strategy=standalone' >> ~/.bazelrc
+    - bazel fetch //base/...
   cache_directories:
     - "/home/ubuntu/.cache/bazel"
 
-database:
-  pre:
-    # stop services that are running by default
-    - sudo service mysql stop
-    - sudo service postgresql stop 9.4
-    - sudo service postgresql stop 9.5
-    - sudo service redis-server stop
-
 test:
   override:
-    - bazel test --verbose_failures //test/...
+    - DOCKER_NO_CACHE=true ./scripts/docker/create.sh
+    - ./scripts/update_dependencies.sh
   post:
-    - mkdir -p "$CIRCLE_ARTIFACTS/bazel-testlogs"
-    - cp -a bazel-testlogs/. "$CIRCLE_ARTIFACTS/bazel-testlogs"
-    - mkdir -p "$CIRCLE_TEST_REPORTS/junit"
-    - find bazel-testlogs/ -type f -name "*.xml" -exec cp --parents "{}" "$CIRCLE_TEST_REPORTS/junit/" \;
+    - git diff > "$CIRCLE_ARTIFACTS/updates.diff"
